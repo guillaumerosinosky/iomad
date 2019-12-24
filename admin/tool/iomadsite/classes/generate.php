@@ -354,6 +354,8 @@ class generate {
      * @param int $courseid;
      */
     protected function create_user($companyid, $courseid) {
+        global $DB;
+
         $firstname = $this->firstnames[array_rand($this->firstnames, 1)];
         $lastname = $this->lastnames[array_rand($this->lastnames, 1)];
         $email = $firstname . '.' . $lastname . '.' . rand(1000,9999) . '@example.com';
@@ -369,7 +371,12 @@ class generate {
         $data->newpassword = 'Aa*12345678';
         $data->companyid = $companyid;
         $data->selectedcourses = [];
-        \company_user::create($data);
+        $data->selectedcourses = [$courseid];
+        $userid = \company_user::create($data);
+        
+        mtrace("Assign course $courseid to user $userid");
+        $userrec = $DB->get_record('user', array('id' => $userid));
+        \company_user::enrol($userrec, array($courseid), $companyid, 0, 0);        
     }
 
     /**
