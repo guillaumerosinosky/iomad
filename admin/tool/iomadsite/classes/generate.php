@@ -24,13 +24,63 @@
 
 namespace tool_iomadsite;
 
+require_once($CFG->dirroot . '/admin/tool/generator/classes/backend.php');
+use tool_generator_backend;
+require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
+use phpunit_util;
+use context_module;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/local/iomad/lib/company.php');
 require_once($CFG->dirroot . '/local/iomad/lib/user.php');
 require_once($CFG->dirroot . '/course/lib.php');
 
-class generate {
+class generate extends tool_generator_backend {
+    /**
+     * @var array Number of sections in course
+     */
+    private static $paramsections = array(1, 10, 100, 500, 1000, 2000);
+    /**
+     * @var array Number of assignments in course
+     */
+    private static $paramassignments = array(1, 10, 100, 500, 1000, 2000);
+    /**
+     * @var array Number of Page activities in course
+     */
+    private static $parampages = array(1, 50, 200, 1000, 5000, 10000);
+    /**
+     * @var array Number of students enrolled in course
+     */
+    private static $paramusers = array(1, 100, 1000, 10000, 50000, 100000);
+    /**
+     * Total size of small files: 1KB, 1MB, 10MB, 100MB, 1GB, 2GB.
+     *
+     * @var array Number of small files created in a single file activity
+     */
+    private static $paramsmallfilecount = array(1, 64, 128, 1024, 16384, 32768);
+    /**
+     * @var array Size of small files (to make the totals into nice numbers)
+     */
+    private static $paramsmallfilesize = array(1024, 16384, 81920, 102400, 65536, 65536);
+    /**
+     * Total size of big files: 8KB, 8MB, 80MB, 800MB, 8GB, 16GB.
+     *
+     * @var array Number of big files created as individual file activities
+     */
+    private static $parambigfilecount = array(1, 2, 5, 10, 10, 10);
+    /**
+     * @var array Size of each large file
+     */
+    private static $parambigfilesize = array(8192, 4194304, 16777216, 83886080,
+            858993459, 1717986918);
+    /**
+     * @var array Number of forum discussions
+     */
+    private static $paramforumdiscussions = array(1, 10, 100, 500, 1000, 2000);
+    /**
+     * @var array Number of forum posts per discussion
+     */
+    private static $paramforumposts = array(2, 2, 5, 10, 10, 10);
 
     protected $companynames = [
         'Acme' => 'Acme Corporation',
@@ -173,6 +223,8 @@ class generate {
 
     protected $licenseindex = 1;
 
+    protected $size = 1;
+
     public function __construct() {
         global $CFG;
 
@@ -180,6 +232,9 @@ class generate {
         require_once($CFG->dirroot . '/admin/tool/iomadsite/lastnames.php');
         $this->firstnames = $firstnames;
         $this->lastnames = $lastnames;
+        require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
+        $this->generator = phpunit_util::get_data_generator();
+        $this->fixeddataset = false;
     }
 
     /**
@@ -298,13 +353,27 @@ class generate {
             $data->fullname = $fullname;
             $data->shortname = $shortname;
             $data->category = $company->category;
+            $data->numsections = self::$paramsections[$this->size];            
             $course = create_course($data);
             $comp->add_course($course, 0, true);
-           
+            $this->course = $course;
             mtrace("Created course '$fullname'");
 
             // Add some users
+            $this->userids = array();
             $this->users($company, $shortname);
+            
+            mtrace("Assignments ");
+            $this->create_assignments();
+            mtrace("Pages ");
+            $this->create_pages();
+            mtrace("Small ");
+            $this->create_small_files();
+            mtrace("Big ");
+            $this->create_big_files();
+
+            $this->create_forum();
+
         }
     }
 
@@ -358,25 +427,39 @@ class generate {
 
         $firstname = $this->firstnames[array_rand($this->firstnames, 1)];
         $lastname = $this->lastnames[array_rand($this->lastnames, 1)];
-        $email = $firstname . '.' . $lastname . '.' . rand(1000,9999) . '@example.com';
+        $email = $companyid . "." . $firstname . '@example.com';
+        $username = $companyid . "." . strtolower($firstname);
         
-        // data object for user details
-        $data = new \stdClass;
-        $data->firstname = $firstname;
-        $data->lastname = $lastname;
-        $data->email = $email;
-        $data->use_email_as_username = 0;
-        $data->sendnewpasswordemails = 0;
-        $data->preference_auth_forcepasswordchange = 0;
-        $data->newpassword = 'Aa*12345678';
-        $data->companyid = $companyid;
-        $data->selectedcourses = [];
-        $data->selectedcourses = [$courseid];
-        $userid = \company_user::create($data);
+        // check existing user
+        $userrec = $DB->get_record('user', array('username' => $username));
         
+        if ($userrec = $DB->get_record('user', array('username' => $username))) {
+            $userid = $userrec->id;
+            mtrace("User $userid reused.");
+        } else {
+
+            // data object for user details
+            $data = new \stdClass;
+            $data->username = $username;
+            $data->firstname = $firstname;
+            $data->lastname = $lastname;
+            $data->email = $email;
+            $data->use_email_as_username = 0;
+            $data->sendnewpasswordemails = 0;
+            $data->preference_auth_forcepasswordchange = 0;
+            $data->newpassword = 'moodle';
+            $data->companyid = $companyid;
+            $data->selectedcourses = [];
+            $userid = \company_user::create($data);
+            mtrace("User $userid created.");
+        }
+
         mtrace("Assign course $courseid to user $userid");
+        $this->userids[] = $userid;
         $userrec = $DB->get_record('user', array('id' => $userid));
         \company_user::enrol($userrec, array($courseid), $companyid, 0, 0);        
+
+
     }
 
     /**
@@ -389,6 +472,7 @@ class generate {
 
         $course = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
         $howmany = rand(10, 40);
+        
         for ($i=1; $i < $howmany; $i++) {
             $this->create_user($company->id, $course->id);
         }
@@ -410,5 +494,224 @@ class generate {
             $this->courses($company);
         }
     }
+
+    /**
+     * Creates a number of Assignment activities.
+     */
+    private function create_assignments() {
+        // Set up generator.
+        $assigngenerator = $this->generator->get_plugin_generator('mod_assign');
+
+        // Create assignments.
+        $number = self::$paramassignments[$this->size];
+        $this->log('createassignments', $number, true);
+        for ($i = 0; $i < $number; $i++) {
+            $record = array('course' => $this->course);
+            $options = array('section' => $this->get_target_section());
+            $assigngenerator->create_instance($record, $options);
+            $this->dot($i, $number);
+        }
+
+        $this->end_log();
+    }
+
+    /**
+     * Creates a number of Page activities.
+     */
+    private function create_pages() {
+        // Set up generator.
+        $pagegenerator = $this->generator->get_plugin_generator('mod_page');
+
+        // Create pages.
+        $number = self::$parampages[$this->size];
+        $this->log('createpages', $number, true);
+        for ($i = 0; $i < $number; $i++) {
+            $record = array('course' => $this->course);
+            $options = array('section' => $this->get_target_section());
+            $pagegenerator->create_instance($record, $options);
+            $this->dot($i, $number);
+        }
+
+        $this->end_log();
+    }
+
+    /**
+     * Creates one resource activity with a lot of small files.
+     */
+    private function create_small_files() {
+        $count = self::$paramsmallfilecount[$this->size];
+        $this->log('createsmallfiles', $count, true);
+
+        // Create resource with default textfile only.
+        $resourcegenerator = $this->generator->get_plugin_generator('mod_resource');
+        $record = array('course' => $this->course,
+                'name' => get_string('smallfiles', 'tool_generator'));
+        $options = array('section' => 0);
+        $resource = $resourcegenerator->create_instance($record, $options);
+
+        // Add files.
+        $fs = get_file_storage();
+        $context = context_module::instance($resource->cmid);
+        $filerecord = array('component' => 'mod_resource', 'filearea' => 'content',
+                'contextid' => $context->id, 'itemid' => 0, 'filepath' => '/');
+        for ($i = 0; $i < $count; $i++) {
+            $filerecord['filename'] = 'smallfile' . $i . '.dat';
+
+            // Generate random binary data (different for each file so it
+            // doesn't compress unrealistically).
+            $data = random_bytes_emulate($this->limit_filesize(self::$paramsmallfilesize[$this->size]));
+
+            $fs->create_file_from_string($filerecord, $data);
+            $this->dot($i, $count);
+        }
+
+        $this->end_log();
+    }
+
+    /**
+     * Creates a number of resource activities with one big file each.
+     */
+    private function create_big_files() {
+        // Work out how many files and how many blocks to use (up to 64KB).
+        $count = self::$parambigfilecount[$this->size];
+        $filesize = $this->limit_filesize(self::$parambigfilesize[$this->size]);
+        $blocks = ceil($filesize / 65536);
+        $blocksize = floor($filesize / $blocks);
+
+        $this->log('createbigfiles', $count, true);
+
+        // Prepare temp area.
+        $tempfolder = make_temp_directory('tool_generator');
+        $tempfile = $tempfolder . '/' . rand();
+
+        // Create resources and files.
+        $fs = get_file_storage();
+        $resourcegenerator = $this->generator->get_plugin_generator('mod_resource');
+        for ($i = 0; $i < $count; $i++) {
+            // Create resource.
+            $record = array('course' => $this->course,
+                    'name' => get_string('bigfile', 'tool_generator', $i));
+            $options = array('section' => $this->get_target_section());
+            $resource = $resourcegenerator->create_instance($record, $options);
+
+            // Write file.
+            $handle = fopen($tempfile, 'w');
+            if (!$handle) {
+                throw new coding_exception('Failed to open temporary file');
+            }
+            for ($j = 0; $j < $blocks; $j++) {
+                $data = random_bytes_emulate($blocksize);
+                fwrite($handle, $data);
+                $this->dot($i * $blocks + $j, $count * $blocks);
+            }
+            fclose($handle);
+
+            // Add file.
+            $context = context_module::instance($resource->cmid);
+            $filerecord = array('component' => 'mod_resource', 'filearea' => 'content',
+                    'contextid' => $context->id, 'itemid' => 0, 'filepath' => '/',
+                    'filename' => 'bigfile' . $i . '.dat');
+            $fs->create_file_from_pathname($filerecord, $tempfile);
+        }
+
+        unlink($tempfile);
+        $this->end_log();
+    }
+
+    /**
+     * Creates one forum activity with a bunch of posts.
+     */
+    private function create_forum() {
+        global $DB;
+
+        $discussions = self::$paramforumdiscussions[$this->size];
+        $posts = self::$paramforumposts[$this->size];
+        $totalposts = $discussions * $posts;
+
+        $this->log('createforum', $totalposts, true);
+
+        // Create empty forum.
+        $forumgenerator = $this->generator->get_plugin_generator('mod_forum');
+        $record = array('course' => $this->course,
+                'name' => get_string('pluginname', 'forum'));
+        $options = array('section' => 0);
+        $forum = $forumgenerator->create_instance($record, $options);
+
+        // Add discussions and posts.
+        $sofar = 0;
+        for ($i = 0; $i < $discussions; $i++) {
+            $record = array('forum' => $forum->id, 'course' => $this->course->id,
+                    'userid' => $this->get_target_user());
+            $discussion = $forumgenerator->create_discussion($record);
+            $parentid = $DB->get_field('forum_posts', 'id', array('discussion' => $discussion->id), MUST_EXIST);
+            $sofar++;
+            for ($j = 0; $j < $posts - 1; $j++, $sofar++) {
+                $record = array('discussion' => $discussion->id,
+                        'userid' => $this->get_target_user(), 'parent' => $parentid);
+                $forumgenerator->create_post($record);
+                $this->dot($sofar, $totalposts);
+            }
+        }
+
+        $this->end_log();
+    }
+
+    /**
+     * Gets a section number.
+     *
+     * Depends on $this->fixeddataset.
+     *
+     * @return int A section number from 1 to the number of sections
+     */
+    private function get_target_section() {
+
+        if (!$this->fixeddataset) {
+            $key = rand(1, self::$paramsections[$this->size]);
+        } else {
+            // Using section 1.
+            $key = 1;
+        }
+
+        return $key;
+    }
+
+    /**
+     * Gets a user id.
+     *
+     * Depends on $this->fixeddataset.
+     *
+     * @return int A user id for a random created user
+     */
+    private function get_target_user() {
+
+        if (!$this->fixeddataset) {
+            $userid = $this->userids[rand(1, count($this->userids)-1)];
+        } else if ($userid = current($this->userids)) {
+            // Moving pointer to the next user.
+            next($this->userids);
+        } else {
+            // Returning to the beginning if we reached the end.
+            $userid = reset($this->userids);
+        }
+
+        return $userid;
+    }
+
+    /**
+     * Restricts the binary file size if necessary
+     *
+     * @param int $length The total length
+     * @return int The limited length if a limit was specified.
+     */
+    private function limit_filesize($length) {
+
+        // Limit to $this->filesizelimit.
+        if (is_numeric($this->filesizelimit) && $length > $this->filesizelimit) {
+            $length = floor($this->filesizelimit);
+        }
+
+        return $length;
+    }
+
 
 }
