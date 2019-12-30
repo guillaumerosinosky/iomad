@@ -150,13 +150,15 @@ class tool_generator_testplan_backend extends tool_generator_backend {
         if (empty($urlcomponents['path'])) {
             $urlcomponents['path'] = '';
         }
-
+        $port = $urlcomponents['port'];
+        
         $replacements = array(
             $CFG->version,
             self::$users[$size],
             self::$loops[$size],
             self::$rampups[$size],
             $urlcomponents['host'],
+            $port,
             $urlcomponents['path'],
             get_string('shortsize_' . $size, 'tool_generator'),
             $targetcourseid,
@@ -172,6 +174,7 @@ class tool_generator_testplan_backend extends tool_generator_backend {
             '{{LOOPS_PLACEHOLDER}}',
             '{{RAMPUP_PLACEHOLDER}}',
             '{{HOST_PLACEHOLDER}}',
+            '{{PORT_PLACEHOLDER}}',
             '{{SITEPATH_PLACEHOLDER}}',
             '{{SIZE_PLACEHOLDER}}',
             '{{COURSEID_PLACEHOLDER}}',
@@ -271,9 +274,15 @@ class tool_generator_testplan_backend extends tool_generator_backend {
             print_error('error_noforuminstances', 'tool_generator');
         }
         $forum = reset($forums);
-
+        $found = false;
         // Getting the first discussion (and reply).
-        if (!$discussions = forum_get_discussions($forum, 'd.timemodified ASC', false, -1, 1)) {
+        foreach($forums as $forum) {
+            if ($discussions = forum_get_discussions($forum, 'd.timemodified ASC', false, -1, 1)) {
+                $found = true;
+                break; 
+            }
+        }
+        if ($found == false) {
             print_error('error_noforumdiscussions', 'tool_generator');
         }
         $discussion = reset($discussions);
