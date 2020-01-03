@@ -319,7 +319,7 @@ class pgsql_native_moodle_database extends moodle_database {
                   FROM pg_catalog.pg_class c
                   JOIN pg_catalog.pg_namespace as ns ON ns.oid = c.relnamespace
                  WHERE c.relname LIKE '$prefix%' ESCAPE '|'
-                       AND c.relkind = 'r'
+                       AND c.relkind in ('r','f')
                        AND (ns.nspname = current_schema() OR ns.oid = pg_my_temp_schema())";
         $this->query_start($sql, null, SQL_QUERY_AUX);
         $result = pg_query($this->pgsql, $sql);
@@ -416,7 +416,7 @@ class pgsql_native_moodle_database extends moodle_database {
                   JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
                   JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
              LEFT JOIN pg_catalog.pg_attrdef d ON (d.adrelid = c.oid AND d.adnum = a.attnum)
-                 WHERE relkind = 'r' AND c.relname = '$tablename' AND c.reltype > 0 AND a.attnum > 0
+                 WHERE relkind in ('r','f') AND c.relname = '$tablename' AND c.reltype > 0 AND a.attnum > 0
                        AND (ns.nspname = current_schema() OR ns.oid = pg_my_temp_schema())
               ORDER BY a.attnum";
 
