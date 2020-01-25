@@ -24,12 +24,12 @@
           </elementProp>
           <elementProp name="host" elementType="Argument">
             <stringProp name="Argument.name">host</stringProp>
-            <stringProp name="Argument.value">{{HOST_PLACEHOLDER}}</stringProp>
+            <stringProp name="Argument.value">${__P(host,{{HOST_PLACEHOLDER}})}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="port" elementType="Argument">
             <stringProp name="Argument.name">port</stringProp>
-            <stringProp name="Argument.value">{{PORT_PLACEHOLDER}}</stringProp>
+            <stringProp name="Argument.value">${__P(port,{{PORT_PLACEHOLDER}})}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="sitepath" elementType="Argument">

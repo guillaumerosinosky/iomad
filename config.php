@@ -26,6 +26,7 @@ if (!empty(getenv('MOODLE_DOCKER_WEB_HOST'))) {
 } else {
     # redirect to used host+port
     $host = $_SERVER['HTTP_HOST'];
+    $CFG->wwwroot   = "http://{$host}";
 }
 
 # disable port as we use HTTP_HOST
