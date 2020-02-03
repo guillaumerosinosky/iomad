@@ -36,7 +36,9 @@ list($options, $unrecognized) = cli_get_params(
         'fixeddataset' => false,
         'filesizelimit' => false,
         'bypasscheck' => false,
-        'quiet' => false
+        'quiet' => false,
+        'nb_courses' => false,
+        'nb_users' => false
     ),
     array(
         'h' => 'help'
@@ -73,7 +75,9 @@ if (empty($options['bypasscheck']) && !$CFG->debugdeveloper) {
 }
 
 // Get options.
-//$sizename = $options['size'];
+$sizename = $options['size'];
+$nb_courses = $options["nb_courses"];
+$nb_users = $options["nb_users"];
 //$fixeddataset = $options['fixeddataset'];
 //$filesizelimit = $options['filesizelimit'];
 
@@ -81,5 +85,5 @@ if (empty($options['bypasscheck']) && !$CFG->debugdeveloper) {
 \core\session\manager::set_user(get_admin());
 
 // Do backend code to generate site.
-$generate = new tool_iomadsite\generate();
+$generate = new tool_iomadsite\generate($nb_users, $nb_courses, $sizename);
 $generate->companies();

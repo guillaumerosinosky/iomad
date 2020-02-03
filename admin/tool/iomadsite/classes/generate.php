@@ -223,9 +223,7 @@ class generate extends tool_generator_backend {
 
     protected $licenseindex = 1;
 
-    protected $size = 1;
-
-    public function __construct() {
+    public function __construct($nb_users, $nb_courses, $size) {
         global $CFG;
 
         require_once($CFG->dirroot . '/admin/tool/iomadsite/firstnames.php');
@@ -235,6 +233,9 @@ class generate extends tool_generator_backend {
         require_once($CFG->dirroot . '/lib/phpunit/classes/util.php');
         $this->generator = phpunit_util::get_data_generator();
         $this->fixeddataset = false;
+        $this->size = $size;
+        $this->nb_users = $nb_users;
+        $this->nb_courses = $nb_courses   ;
     }
 
     /**
@@ -346,7 +347,9 @@ class generate extends tool_generator_backend {
         $comp = new \company($company->id);
         
         // Add a random number of courses
-        $howmany = rand(10, 25);
+        #$howmany = rand(10, 25);
+        // Set 10 courses
+        $howmany = $this->nb_courses;
         for ($i=0; $i < $howmany; $i++) {
             list($shortname, $fullname) = $this->invent_coursename();
             $data = new \stdClass();
@@ -471,8 +474,8 @@ class generate extends tool_generator_backend {
         global $DB;
 
         $course = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
-        $howmany = rand(10, 40);
-        
+        #$howmany = rand(10, 40);
+        $howmany = $this->nb_users;
         for ($i=1; $i < $howmany; $i++) {
             $this->create_user($company->id, $course->id);
         }
