@@ -67,11 +67,6 @@
       <stringProp name="TestPlan.user_define_classpath"></stringProp>
     </TestPlan>
     <hashTree>
-      <ConstantThroughputTimer guiclass="TestBeanGUI" testclass="ConstantThroughputTimer" testname="Samples per minute" enabled="true">
-        <stringProp name="calcMode">all active threads (shared)</stringProp>
-        <stringProp name="throughput">${__property(throughput,throughput,120.0)}</stringProp>
-      </ConstantThroughputTimer>
-      <hashTree/>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Warm-up site" enabled="true">
         <stringProp name="TestPlan.comments">Used to fill the caches, logs in every user</stringProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
