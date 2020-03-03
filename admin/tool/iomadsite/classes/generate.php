@@ -242,7 +242,7 @@ class generate extends tool_generator_backend {
      * Make course name
      * @return array(shortname, fullname) 
      */
-    protected function invent_coursename() {
+    protected function invent_coursename($tenant) {
  
         if (rand(0,10) < 4) {
             $extra = $this->courseextra[array_rand($this->courseextra,1)] . ' ';
@@ -252,7 +252,7 @@ class generate extends tool_generator_backend {
         $coursepre = $this->coursepre[array_rand($this->coursepre,1)];
         $coursepost = $this->coursepost[array_rand($this->coursepost,1)];
         $fullname = $extra . $coursepre . ' ' . $coursepost;
-        $shortname = substr($coursepre, 0, 1) . substr($coursepost, 0, 1) . rand(10000, 99999);
+        $shortname = $tenant.substr($coursepre, 0, 1) . substr($coursepost, 0, 1) . rand(10000, 99999);
 
         return [$shortname, $fullname];
     }
@@ -351,7 +351,7 @@ class generate extends tool_generator_backend {
         // Set 10 courses
         $howmany = $this->nb_courses;
         for ($i=0; $i < $howmany; $i++) {
-            list($shortname, $fullname) = $this->invent_coursename();
+            list($shortname, $fullname) = $this->invent_coursename($company->id);
             $data = new \stdClass();
             $data->fullname = $fullname;
             $data->shortname = $shortname;
