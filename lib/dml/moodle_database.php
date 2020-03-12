@@ -533,7 +533,8 @@ abstract class moodle_database {
                 $log->sqlparams  = var_export((array)$this->last_params, true);
                 $log->error      = (int)$iserror;
                 $log->info       = $iserror ? $error : null;
-                $log->backtrace  = format_backtrace($backtrace, true)."UserID:".$USER->id;
+                global $USER;
+                $log->backtrace  = format_backtrace($backtrace, true)."UserID:".$USER->username;
                 $log->exectime   = $time;
                 $log->timelogged = time();
                 $this->insert_record('log_queries', $log);
