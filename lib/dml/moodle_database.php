@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__.'/../../config.php');
 require_once(__DIR__.'/database_column_info.php');
 require_once(__DIR__.'/moodle_recordset.php');
 require_once(__DIR__.'/moodle_transaction.php');
@@ -533,8 +532,17 @@ abstract class moodle_database {
                 $log->sqlparams  = var_export((array)$this->last_params, true);
                 $log->error      = (int)$iserror;
                 $log->info       = $iserror ? $error : null;
+
+                // add in backtrace current username (default "")
                 global $USER;
-                $log->backtrace  = format_backtrace($backtrace, true)."UserID:".$USER->username;
+                $userid = '';
+                if (isset($USER)) {
+                        //require_login();
+                        if (property_exists($USER,username)) {
+                                $userid = $USER->username;
+                        }
+                }
+                $log->backtrace  = "UserID:".$userid."\n".format_backtrace($backtrace, true);
                 $log->exectime   = $time;
                 $log->timelogged = time();
                 $this->insert_record('log_queries', $log);
