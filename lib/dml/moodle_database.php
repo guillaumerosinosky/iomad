@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require('../../config.php');
+require_once(__DIR__.'/../../config.php');
 require_once(__DIR__.'/database_column_info.php');
 require_once(__DIR__.'/moodle_recordset.php');
 require_once(__DIR__.'/moodle_transaction.php');
